@@ -98,37 +98,45 @@ JOB DESCRIPTION:
 RESUME:
 {resume_text[:4000]}
 
-Please provide a detailed analysis in the following format:
+IMPORTANT: You MUST respond with actual numeric scores (0-100), not placeholders like "[0-100]".
 
-OVERALL SCORE: [0-100]
-[Rate how well the candidate matches the job description]
+Please provide a detailed analysis in the following EXACT format:
 
-INTERVIEW RECOMMENDATION: [Yes / No / Maybe]
-[Should this candidate be invited for an interview?]
+OVERALL SCORE: 75
+(Your actual numeric score from 0-100)
 
-KEY QUALIFICATIONS MATCH: [0-100]
-[How well do their qualifications match the job requirements?]
+INTERVIEW RECOMMENDATION: Yes
+(Choose: Yes / No / Maybe)
 
-SKILLS ASSESSMENT: [0-100]
-[Do they have the required skills? Rate and explain]
+KEY QUALIFICATIONS MATCH: 80
+(Your actual numeric score from 0-100)
 
-EXPERIENCE ASSESSMENT: [0-100]
-[Does their experience align with what the job requires?]
+SKILLS ASSESSMENT: 75
+(Your actual numeric score from 0-100)
 
-EDUCATION ASSESSMENT: [0-100]
-[Does their education meet the requirements?]
+EXPERIENCE ASSESSMENT: 70
+(Your actual numeric score from 0-100)
+
+EDUCATION ASSESSMENT: 85
+(Your actual numeric score from 0-100)
 
 STRENGTHS:
-[List 3-5 key strengths that make them a good fit for THIS job]
+- Strong Python development skills
+- Experience with cloud infrastructure
+- Excellent communication abilities
 
 GAPS & CONCERNS:
-[List 2-3 areas where they don't meet the job requirements]
+- Limited experience with team leadership
+- Missing some advanced certifications
 
 INTERVIEW QUESTIONS:
-[Suggest 3-4 specific interview questions based on gaps or strengths]
+- Tell me about a challenging project you led
+- How do you stay updated with new technologies?
 
 SUMMARY:
-[2-3 sentences explaining why they should or should not be interviewed]
+A solid candidate with strong technical skills who would be a good fit for the role.
+
+REMEMBER: Replace the example numbers above with your actual scores. Do NOT include "[0-100]" or similar placeholders.
 """
         else:
             # Use criteria-based analysis (fallback)
@@ -144,36 +152,70 @@ Screening Criteria:
 - Education: {criteria.get('education', 'Not specified')}
 - Additional Requirements: {criteria.get('additional_notes', 'None')}
 
-Please provide a detailed analysis in the following format:
+IMPORTANT: You MUST respond with actual numeric scores (0-100), not placeholders like "[0-100]".
 
-OVERALL SCORE: [0-100]
+Please provide a detailed analysis in the following EXACT format:
 
-INTERVIEW RECOMMENDATION: [Yes / No / Maybe]
-[Should this candidate be invited for an interview?]
+OVERALL SCORE: 75
+(Your actual numeric score from 0-100)
 
-SKILLS MATCH: [0-100]
-[Explain which skills match and which are missing]
+INTERVIEW RECOMMENDATION: Yes
+(Choose: Yes / No / Maybe)
 
-EXPERIENCE ASSESSMENT: [0-100]
-[Evaluate if the experience level matches requirements]
+SKILLS MATCH: 75
+(Your actual numeric score from 0-100)
 
-EDUCATION ASSESSMENT: [0-100]
-[Evaluate if education meets requirements]
+EXPERIENCE ASSESSMENT: 70
+(Your actual numeric score from 0-100)
+
+EDUCATION ASSESSMENT: 85
+(Your actual numeric score from 0-100)
 
 STRENGTHS:
-[List 3-5 key strengths]
+- Strong technical background
+- Relevant work experience
+- Good educational qualifications
 
 GAPS & CONCERNS:
-[List 2-3 areas where the candidate falls short]
+- Missing some specific skills
+- Limited industry experience
 
 INTERVIEW QUESTIONS:
-[Suggest 3-4 specific interview questions]
+- Describe your experience with key technologies
+- How do you approach problem-solving?
 
 SUMMARY:
-[2-3 sentence summary of the candidate's fit]
+A qualified candidate who meets most requirements.
+
+REMEMBER: Replace the example numbers above with your actual scores. Do NOT include "[0-100]" or similar placeholders.
 """
 
         return prompt
+
+    def _extract_score(self, text: str) -> int:
+        """Extract a numeric score from text, trying multiple patterns."""
+        import re
+
+        # Try to find a number followed by % or just a number
+        patterns = [
+            r'(\d+)\s*%',           # "75%" or "75 %"
+            r'^\s*(\d+)\s*$',       # Just a number "75"
+            r'(\d+)\s*out\s*of\s*\d+',  # "75 out of 100"
+            r'(\d+)/\d+',           # "75/100"
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                try:
+                    score = int(match.group(1))
+                    # Ensure score is within valid range
+                    if 0 <= score <= 100:
+                        return score
+                except (ValueError, IndexError):
+                    continue
+
+        return 0
 
     def _parse_analysis_response(self, response_text: str) -> Dict[str, Any]:
         """Parse the AI response into structured data."""
@@ -199,10 +241,8 @@ SUMMARY:
             line = line.strip()
 
             if line.startswith('OVERALL SCORE:'):
-                try:
-                    result['overall_score'] = int(line.split(':')[1].strip().split()[0])
-                except (ValueError, IndexError):
-                    pass
+                score_part = line.split(':', 1)[1].strip() if ':' in line else ''
+                result['overall_score'] = self._extract_score(score_part)
 
             elif line.startswith('INTERVIEW RECOMMENDATION:'):
                 result['interview_recommendation'] = line.split(':', 1)[1].strip()
@@ -210,31 +250,23 @@ SUMMARY:
                 current_section = None
 
             elif line.startswith('KEY QUALIFICATIONS MATCH:'):
-                try:
-                    result['qualifications_score'] = int(line.split(':')[1].strip().split()[0])
-                except (ValueError, IndexError):
-                    pass
+                score_part = line.split(':', 1)[1].strip() if ':' in line else ''
+                result['qualifications_score'] = self._extract_score(score_part)
                 current_section = 'qualifications'
 
             elif line.startswith('SKILLS MATCH:') or line.startswith('SKILLS ASSESSMENT:'):
-                try:
-                    result['skills_score'] = int(line.split(':')[1].strip().split()[0])
-                except (ValueError, IndexError):
-                    pass
+                score_part = line.split(':', 1)[1].strip() if ':' in line else ''
+                result['skills_score'] = self._extract_score(score_part)
                 current_section = 'skills'
 
             elif line.startswith('EXPERIENCE ASSESSMENT:'):
-                try:
-                    result['experience_score'] = int(line.split(':')[1].strip().split()[0])
-                except (ValueError, IndexError):
-                    pass
+                score_part = line.split(':', 1)[1].strip() if ':' in line else ''
+                result['experience_score'] = self._extract_score(score_part)
                 current_section = 'experience'
 
             elif line.startswith('EDUCATION ASSESSMENT:'):
-                try:
-                    result['education_score'] = int(line.split(':')[1].strip().split()[0])
-                except (ValueError, IndexError):
-                    pass
+                score_part = line.split(':', 1)[1].strip() if ':' in line else ''
+                result['education_score'] = self._extract_score(score_part)
                 current_section = 'education'
 
             elif line.startswith('STRENGTHS:'):
