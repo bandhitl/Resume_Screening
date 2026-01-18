@@ -4,12 +4,14 @@ services:
     name: resume-screener-pwa
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
       - key: APP_PASSWORD
         sync: false
+      - key: PORT
+        value: 5001
       # Optional: Add your API keys here later
       # - key: ANTHROPIC_API_KEY
       #   sync: false
