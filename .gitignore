@@ -40,3 +40,9 @@ Thumbs.db
 # Application output
 *.xlsx
 logs/
+
+# Uploads folder
+uploads/
+
+# Render cache
+.render-cache/
