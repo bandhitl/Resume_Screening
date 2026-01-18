@@ -626,29 +626,28 @@
             document.getElementById('resultsSection').style.display = 'none';
 
             try {
-                // Upload files
-                const formData = new FormData();
-                Array.from(files).forEach(file => {
-                    formData.append('files', file);
-                });
-
-                const uploadResponse = await fetch('/api/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const uploadData = await uploadResponse.json();
-
-                if (!uploadData.success) {
-                    throw new Error(uploadData.error || 'Upload failed');
-                }
+                // Convert files to base64
+                const filesData = await Promise.all(Array.from(files).map(async (file) => {
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            resolve({
+                                original_name: file.name,
+                                content: reader.result.split(',')[1], // Remove data URL prefix
+                                id: Date.now() + Math.random().toString(36).substr(2, 9)
+                            });
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                }));
 
                 // Prepare analysis request
                 const requestData = {
                     api_key: apiKey,
                     provider: document.querySelector('input[name="provider"]:checked').value,
                     mode: mode,
-                    files: uploadData.files
+                    files: filesData
                 };
 
                 if (mode === 'description') {
@@ -661,7 +660,7 @@
                     requestData.additional_notes = document.getElementById('additionalNotes').value;
                 }
 
-                // Analyze
+                // Analyze directly
                 const analyzeResponse = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

@@ -83,7 +83,7 @@ def serve_service_worker():
 @app.route('/api/upload', methods=['POST'])
 @login_required
 def upload_files():
-    """Handle file uploads."""
+    """Handle file uploads - keep files in memory."""
     if 'files' not in request.files:
         return jsonify({'error': 'No files provided'}), 400
 
@@ -92,15 +92,13 @@ def upload_files():
 
     for file in files:
         if file and allowed_file(file.filename):
-            # Generate unique filename
+            # Read file content into memory
+            file_content = file.read()
             filename = secure_filename(file.filename)
-            unique_filename = f"{uuid.uuid4()}_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-            file.save(filepath)
             uploaded_files.append({
                 'original_name': filename,
-                'saved_path': filepath,
-                'id': unique_filename
+                'content': file_content,
+                'id': str(uuid.uuid4())
             })
 
     return jsonify({
@@ -154,8 +152,24 @@ def analyze():
         # Analyze each file
         for file_info in data['files']:
             try:
-                # Parse resume
-                resume_text = parser.parse_resume(file_info['saved_path'])
+                # Parse resume - handle both file path and bytes
+                if 'saved_path' in file_info:
+                    resume_text = parser.parse_resume(file_info['saved_path'])
+                elif 'content' in file_info:
+                    import base64
+                    # Decode base64 content if needed
+                    if isinstance(file_info['content'], str):
+                        file_content = base64.b64decode(file_info['content'])
+                    else:
+                        file_content = file_info['content']
+                    resume_text = parser.parse_resume_from_bytes(file_content, file_info['original_name'])
+                else:
+                    results.append({
+                        'filename': file_info['original_name'],
+                        'error': 'No file content or path provided'
+                    })
+                    continue
+
                 if not resume_text:
                     results.append({
                         'filename': file_info['original_name'],
@@ -182,10 +196,10 @@ def analyze():
         error_results = [r for r in results if 'error' in r]
         final_results = valid_results + error_results
 
-        # Clean up uploaded files
+        # Clean up uploaded files if they were saved to disk
         for file_info in data['files']:
             try:
-                if os.path.exists(file_info['saved_path']):
+                if 'saved_path' in file_info and os.path.exists(file_info['saved_path']):
                     os.remove(file_info['saved_path'])
             except:
                 pass

@@ -22,6 +22,21 @@ class ResumeParser:
             return None
 
     @staticmethod
+    def extract_text_from_pdf_bytes(file_content: bytes) -> Optional[str]:
+        """Extract text from PDF bytes in memory."""
+        try:
+            import io
+            text = ""
+            pdf_file = io.BytesIO(file_content)
+            pdf_reader = PyPDF2.PdfReader(pdf_file)
+            for page in pdf_reader.pages:
+                text += page.extract_text() + "\n"
+            return text.strip()
+        except Exception as e:
+            print(f"Error reading PDF from bytes: {e}")
+            return None
+
+    @staticmethod
     def extract_text_from_docx(file_path: str) -> Optional[str]:
         """Extract text from a DOCX file."""
         try:
@@ -32,6 +47,21 @@ class ResumeParser:
             return text.strip()
         except Exception as e:
             print(f"Error reading DOCX file {file_path}: {e}")
+            return None
+
+    @staticmethod
+    def extract_text_from_docx_bytes(file_content: bytes) -> Optional[str]:
+        """Extract text from DOCX bytes in memory."""
+        try:
+            import io
+            doc_file = io.BytesIO(file_content)
+            doc = Document(doc_file)
+            text = ""
+            for paragraph in doc.paragraphs:
+                text += paragraph.text + "\n"
+            return text.strip()
+        except Exception as e:
+            print(f"Error reading DOCX from bytes: {e}")
             return None
 
     @classmethod
@@ -47,6 +77,19 @@ class ResumeParser:
             return cls.extract_text_from_pdf(file_path)
         elif file_extension in ['.docx', '.doc']:
             return cls.extract_text_from_docx(file_path)
+        else:
+            print(f"Unsupported file format: {file_extension}")
+            return None
+
+    @classmethod
+    def parse_resume_from_bytes(cls, file_content: bytes, filename: str) -> Optional[str]:
+        """Parse resume from bytes in memory."""
+        file_extension = os.path.splitext(filename)[1].lower()
+
+        if file_extension == '.pdf':
+            return cls.extract_text_from_pdf_bytes(file_content)
+        elif file_extension in ['.docx', '.doc']:
+            return cls.extract_text_from_docx_bytes(file_content)
         else:
             print(f"Unsupported file format: {file_extension}")
             return None
