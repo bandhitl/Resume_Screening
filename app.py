@@ -71,11 +71,11 @@ def serve_manifest():
     return send_file('static/manifest.json', mimetype='application/manifest+json')
 
 
-# Serve service worker
-@app.route('/static/service-worker.js')
+# Serve service worker at root
+@app.route('/service-worker.js')
 def serve_service_worker():
     """Serve the service worker file."""
-    response = send_file('static/service-worker.js', mimetype='application/javascript')
+    response = send_file('service-worker.js', mimetype='application/javascript')
     response.headers['Service-Worker-Allowed'] = '/'
     return response
 

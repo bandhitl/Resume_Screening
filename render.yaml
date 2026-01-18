@@ -1,0 +1,17 @@
+services:
+  # Type: Web Service
+  - type: web
+    name: resume-screener-pwa
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: APP_PASSWORD
+        sync: false
+      # Optional: Add your API keys here later
+      # - key: ANTHROPIC_API_KEY
+      #   sync: false
+      # - key: OPENAI_API_KEY
+      #   sync: false
